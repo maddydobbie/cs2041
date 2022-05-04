@@ -1,0 +1,43 @@
+
+This file is automarked.
+
+Do not add extra lines to this file, just add your answers.
+
+For example if your answer to Q1 is: egrep Andrew words.txt
+Change the line that says Q1 answer to:
+
+Q1 answer: egrep Andrew words.txt
+
+
+1) Write a shell pipeline to print how many classes there are.
+
+Q1 answer: cat classes.txt | wc -l
+
+
+2) Write a shell pipeline to print how many different courses have classes.
+
+Q2 answer: cat classes.txt | cut -f1 | uniq -c | wc -l
+
+
+3) Write a shell pipeline which will print the course with the most classes (and no
+other courses) and how many classes are in this course.
+
+Q3 answer: cat classes.txt | cut -f1 | uniq -c | sort -r | head -n 1
+
+
+4) Write a shell pipeline that prints the room most frequently-used room by CSE classes and how often it is used.
+
+Q4 answer: cat classes.txt | egrep -v "LAB" | cut -f5 | sort | uniq -c | sort -r | head -n 1
+
+
+5) Write a shell pipeline  that prints the most popular time-of-day for classes to
+start and how many classes start at that time.
+
+Q5 answer: cat classes.txt | cut -f4 | cut -d'-' -f1 | sort | uniq -c | sort -r | head -n 1
+
+
+6) Challenge: Write a shell pipeline that prints a list of the course codes (only) of COMP courses that
+run 2 or more  classes of the same type starting at the same time on the same day (e.g. three tut-labs starting Monday at 10:00).
+
+Q6 answer: cat classes.txt | egrep "^COMP" | cut -f1 > data1 && cat classes.txt | egrep "^COMP" | cut -f4 > data2 && paste data1 data2 > data3 && cat data3 | sort | uniq -c | sort -r | egrep -v "1 C" | cut -c9-16 | sort | uniq -c |cut -c9-16
+

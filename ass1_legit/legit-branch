@@ -1,0 +1,55 @@
+#!/usr/bin/perl -w
+use File::Copy;
+use 5.010;
+
+# if no repo
+if ( ! -e ".legit" ) {
+	print "legit-rm: error: no .legit directory containing legit repository exists\n";
+	exit
+}
+
+# if number of arg > 2
+if ($#ARGV > 2) {
+	print "usage: legit-branch [-d] <branch>\n";
+	exit
+}
+
+$deleteFlag = 0;
+# if delete flag is first arg, then delete branch
+if ($ARGV[0] eq "-d") {
+	# rm delete
+	$deleteFlag = 1;
+} else {
+	# if number of args = 0, print all brnaches
+	if ($#ARGV == 0) {
+		# print the branches
+		my @files = <.legit/.git/.branches/*>;
+			foreach my $file (@files) {
+				$text =~ tr/a/z/;
+				#file=${file#".legit/.git/.branches/"}
+  				print "$file\n";
+			}
+	} else {
+		# else, check if arg exists in branch. if yes error, if not create branch
+		if ( -e ".legit/.git/.branches/$ARGV[0]") {
+			print "legit-branch: error: branch '$ARGV[0]' already exists\n";
+		} else {
+			# copy index to branch dir
+			my $source_dir = ".legit/.git/.branches/$ARGV[0]";
+			my $target_dir = ".legit/.git/index";
+
+			opendir(my $DIR, $source_dir) || die "can't opendir $source_dir: $!";  
+			my @files = readdir($DIR);
+
+			foreach my $t (@files) {	
+				if("$source_dir/$t" ) {
+				    #Check with -f only for files (no directories)
+				    copy "$source_dir/$t", "$target_dir/$t";
+				}
+			}
+			closedir($DIR);
+		}
+	}
+	
+}
+

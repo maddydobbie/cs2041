@@ -1,0 +1,17 @@
+#!/bin/dash
+
+if [ -e ".legit/" ]
+then 
+	echo "legit-init: error: .legit already exists"
+	exit
+fi
+
+mkdir ".legit"
+cd .legit
+mkdir ".git"
+cd .git
+mkdir "index"
+mkdir ".commits"
+mkdir ".branches"
+cd ../..
+echo "Initialized empty legit repository in .legit"

@@ -1,0 +1,127 @@
+#!/bin/dash
+# if repo doesnt exist
+if [ ! -e ".legit" ]
+then
+    echo "legit-rm: error: no .legit directory containing legit repository exists"
+    exit 1
+fi
+
+# find number commit
+count=0
+while [ -e ".legit/.git/.commits/$count/" ]
+do 
+	count=$(expr $count + 1)
+done
+lastCommit=$((count-1))
+
+# if temp exists, rm
+if [ -e ".legit/.git/temp" ]
+then
+	rm .legit/.git/temp
+fi
+
+# get all files from cwd and put in temp file
+for f in *
+do
+	echo $f >> .legit/.git/temp
+done
+# get all files from index and put in temp file
+for f in .legit/.git/index/*
+do
+	f=${f#".legit/.git/index/"}
+	echo $f >> .legit/.git/temp
+done
+# get all files from repo and put in temp file
+for f in .legit/.git/.commits/$lastCommit/*
+do
+	f=${f#".legit/.git/.commits/$lastCommit/"}
+	echo $f >> .legit/.git/temp
+done
+
+# uniq -c sort the file and resave
+cat .legit/.git/temp | tr " " "\n" | sort | uniq > .legit/.git/temp_temp
+cp .legit/.git/temp_temp .legit/.git/temp
+rm .legit/.git/temp_temp
+
+# get files
+input="$(cat .legit/.git/temp)"
+for f in $input
+do
+	if [ ! -e "$f" ] && [ ! -e ".legit/.git/index/$f" ] && [ ! -e ".legit/.git/.commits/$lastCommit/$f" ]
+	then
+		continue
+	fi
+	## find differences
+	# doesnt exist - continue
+	# if f exists in cwd and index, calc dif
+	if ([ -e "$f" ] && [ -e ".legit/.git/index/$f" ])
+	then
+		difCI="$(diff $f .legit/.git/index/$f)"
+	fi
+	# if f exists in cwd and repo, calc dif
+	if [ -e "$f" ] && [ -e ".legit/.git/.commits/$lastCommit/$f" ]
+	then
+		difCR="$(diff $f .legit/.git/.commits/$lastCommit/$f)"
+	fi
+	# if f exists in index and repo, calc dif
+	if [ -e ".legit/.git/index/$f" ] && [ -e ".legit/.git/.commits/$lastCommit/$f" ]
+	then
+		difIR="$(diff .legit/.git/index/$f .legit/.git/.commits/$lastCommit/$f)"
+	fi
+
+	## status messages
+	# exists onle in last commit, deleted
+	if [ ! -e "$f" ] && [ ! -e ".legit/.git/index/$f" ] && [ -e ".legit/.git/.commits/$lastCommit/$f" ] 
+	then
+		echo "$f - deleted"
+	# only in index - file deleted
+	elif [ ! -e "$f" ] && [ -e ".legit/.git/index/$f" ] && [ ! -e ".legit/.git/.commits/$lastCommit/$f" ] 
+	then
+		echo "$f - file deleted"
+	# exists in index and last commit, file deleted
+	elif [ ! -e "$f" ] && [ -e ".legit/.git/index/$f" ] && [ -e ".legit/.git/.commits/$lastCommit/$f" ] 
+	then
+		# if files are the same, file delted, otherwise different changes staged for commit
+		if [ "$difIR" = "" ]
+		then
+			echo "$f - file deleted"
+		else
+			echo "$f - file deleted, different changes staged for commit"
+		fi
+	# if exists in only cwd, untracked
+	elif [ -e "$f" ] && [ ! -e ".legit/.git/index/$f" ] && [ ! -e ".legit/.git/.commits/$lastCommit/$f" ] 
+	then
+		echo "$f - untracked"
+	# if exists in cwd ad repo, untracked
+	elif [ -e "$f" ] && [ ! -e ".legit/.git/index/$f" ] && [ -e ".legit/.git/.commits/$lastCommit/$f" ] 
+	then
+		echo "$f - untracked"
+	# in index and cwd
+	elif [ -e "$f" ] && [ -e ".legit/.git/index/$f" ] && [ ! -e ".legit/.git/.commits/$lastCommit/$f" ] 
+	then
+		# whether same or not, still added to index
+		echo "$f - added to index"
+	# everywhere
+	else
+		# all files are the same, same as repo
+		if [ "$difCI" = "" ] && [ "$difCR" = "" ] && [ "$difIR" = "" ]
+		then
+			echo "$f - same as repo"
+		# cwd and index only match, different to repo
+		elif [ "$difCI" = "" ] && [ ! "$difCR" = "" ] && [ ! "$difIR" = "" ]
+		then
+			echo "$f - file changed, changes staged for commit"
+		# current and repo same, index different can this happen??
+		elif [ ! "$difCI" = "" ] && [ "$difCR" = "" ] && [ ! "$difIR" = "" ]
+		then
+			echo "$f - file changed, different changes staged for commit"
+		# index and repo equal, cwd different 
+		elif [ ! "$difCI" = "" ] && [ ! "$difCR" = "" ] && [ "$difIR" = "" ]
+		then
+			echo "$f - file changed, changes not staged for commit"
+		# all different MESs
+		else
+			echo "$f - file changed, different changes staged for commit"
+		fi
+	fi
+done 

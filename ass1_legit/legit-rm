@@ -1,0 +1,147 @@
+#!/bin/dash
+# check repo exists
+if [ ! -e ".legit" ]
+then
+    echo "legit-rm: error: no .legit directory containing legit repository exists"
+    exit 1
+fi
+# error checking: no args
+if [ $# -eq 0 ] 
+then 
+	echo "usage: legit-rm [--force] [--cached] <filenames>"
+fi
+# set force and cached flags
+force=0
+cached=0
+if [ "$1" = "--force" ]
+then
+    force=1
+fi
+if [ "$1" = "--cached" ] || [ "$2" = "--cached" ]
+then
+    cached=1
+fi
+# get last commit
+count=0
+while [ -e ".legit/.git/.commits/$count" ]
+do
+	count=$((count+1))
+done
+lastCommit=$((count-1))
+if [ $lastCommit -eq -1 ]
+then
+    echo "legit-rm: error: your repository does not have any commits yet"
+    exit 1
+fi
+
+# only need force in cached if:
+			# force exist, 
+			# file is in last commit AND 
+			# file is diff between curr dir and repo, 
+			# file is diff between index and curr dir
+			# different between index and repo
+
+# removal code
+if [ $cached -eq 0 ]
+then
+	for f in "$@"
+	do
+		# make sure not the force or cache arg
+		if [ "$f" = "--force" ] || [ "$f" = "--cached" ] 
+        then
+            continue
+        fi
+		# if the file is not in the index then error
+		if [ ! -e ".legit/.git/index/$f" ]
+		then
+			echo "legit-rm: error: '$f' is not in the legit repository"
+            exit 1
+		fi
+		# check to see if the file in the current directory exits in a repo
+        # if not --forced
+        # else remove the file in the current working directory and cwd
+		if [ $force -eq 0 ]
+		then
+			# if it does not exist in the last commit or the file is identical in both the 
+            # index and cwd but different in repo then error and exit
+			if [ ! -e ".legit/.git/.commits/$lastCommit/$f" ]
+            then
+                echo "legit-rm: error: '$f' has changes staged in the index"
+                exit 1
+            fi
+			difCR="$(diff $f .legit/.git/.commits/$lastCommit/$f)"
+			difCI="$(diff $f .legit/.git/index/$f)"
+			difIR="$(diff .legit/.git/index/$f .legit/.git/.commits/$lastCommit/$f)"
+			if [ ! -e ".legit/.git/.commits/$lastCommit/$f" ] || ([ ! "$difCR" = "" ] && [  "$difCI" = "" ] && [ ! 	"$difIR" = "" ])
+            then
+                echo "legit-rm: error: '$f' has changes staged in the index"
+                exit 1
+            fi
+			# if the file in cwd is differnt to repo and index error and exit
+			if ([ ! "$difCR" = "" ] && [ ! "$difCI" = "" ] && [ ! "$difIR" = "" ])
+			then
+				echo "legit-rm: error: '$f' in index is different to both working file and repository"
+				exit 1
+			fi
+			# if the file in the cwd is different to the repo error and exit
+			if [ ! "$difCR" = "" ]
+			then
+                echo "legit-rm: error: '$f' in repository is different to working file"
+                exit 1
+            fi  
+            rm ".legit/.git/index/$f"
+			rm "$f"
+		else
+            rm ".legit/.git/index/$f"
+			rm "$f"
+		fi
+	done
+else
+	for f in "$@"
+	do
+		# make sure not the force or cache arg
+		if [ "$f" = "--force" ] || [ "$f" = "--cached" ] 
+        then
+            continue
+        fi
+		# if the file is not in the index then error
+		if [ ! -e ".legit/.git/index/$f" ]
+		then
+			echo "legit-rm: error: '$f' is not in the legit repository"
+			exit 1
+		fi
+		# if --force is in effect and if it exists in the repo
+		if [ $force -eq 0 ] && [ -e ".legit/.git/.commits/$lastCommit/$f" ]
+		then
+			if [ ! -e ".legit/.git/.commits/$lastCommit/$f" ]
+            then
+                echo "legit-rm: error: '$f' has changes staged in the index"
+                exit 1
+            fi
+			difCR="$(diff $f .legit/.git/.commits/$lastCommit/$f)"
+			difCI="$(diff $f .legit/.git/index/$f)"
+			difIR="$(diff .legit/.git/index/$f .legit/.git/.commits/$lastCommit/$f)"
+			# if the file in cwd is differnt to repo and index error and exit
+            if [ ! "$difCR" = "" ] && [ ! "$difCI" = "" ] && [ ! "$difIR" = "" ]
+            then
+                echo "legit-rm: error: '$f' in index is different to both working file and repository"
+                exit 1
+            fi
+			rm ".legit/.git/index/$f"
+		else
+			rm ".legit/.git/index/$f"
+		fi
+
+	done
+fi
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,16 @@
+#!/bin/dash
+# error: no repository
+if [ ! -e ".legit" ]
+then 
+	echo "legit-add: error: no .legit directory containing legit repository exists"
+	exit 1
+fi
+
+# error: have args
+if [ $# -ne 0 ]
+then 
+	echo "usage: legit-log"
+	exit 1
+fi
+
+cat ".legit/.git/.commits/log"

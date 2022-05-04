@@ -1,0 +1,59 @@
+#!/bin/dash
+
+# Error checking 
+	# not enough arguments 
+	# too many arguments
+	# if arg 1 isnt -a or -m
+	# if arg1 is -a, arg2 isnt -m
+if [ $# -lt 2 ] || [ $# -gt 3 ] || ([ "$1" != "-a" ] && [ "$1" != "-m" ]) || ([ "$1" = "-a" ] && [ "$2" != "-m" ])
+then
+	echo "usage: legit-commit [-a] -m commit-message"
+	exit 1
+fi
+# get message and do -a if necessary
+if [ "$1" = "-a" ] 
+then
+	message=$3
+	for file in .legit/.git/index/*
+	do 
+		file=${file#".legit/.git/index/"}
+		cp "$file" ".legit/.git/index/$file"
+	done
+else
+	message=$2
+fi
+
+# saves a copy of all files in the index to the repository
+# find number commit
+count=0
+while [ -e ".legit/.git/.commits/$count/" ]
+do 
+	count=$((count+1))
+done
+# check there are files in index to be commited ie. new files since last commit, otherwise exit
+if [ -e ".legit/.git/.commits/0" ]
+then
+	old=$((count-1))
+	dif="$(diff -r .legit/.git/.commits/$old .legit/.git/index)"
+	if [ "$dif" = "" ] 
+	then
+		echo "nothing to commit"
+		exit 1
+	fi
+fi
+
+# take ALL files from index and copy into new commit  directory
+cp -r .legit/.git/index .legit/.git/.commits/$count
+
+# add commit and message to log file
+# if log is empty, add normal way, else add at top
+# if [ -s] then not empty
+if [ -e ".legit/.git/.commits/log" ]
+then
+	sed -i "1s/^/$count $message\n/" .legit/.git/.commits/log
+else
+	touch .legit/.git/.commits/log
+	echo "$count $message" > .legit/.git/.commits/log
+fi
+# print success message
+echo "Committed as commit $count"

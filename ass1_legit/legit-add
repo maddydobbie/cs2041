@@ -1,0 +1,38 @@
+#!/bin/dash
+
+# error: no files
+if [ $# -eq 0 ]
+then 
+	echo "usage: legit-add <filenames>"
+	exit 1
+fi
+# error: no repository
+if [ ! -e ".legit" ]
+then 
+	echo "legit-add: error: no .legit directory containing legit repository exists"
+	exit 1
+fi
+
+for f in "$@"
+do 
+	# error: invalid filename
+#	if [ "$f" != "^[a-zA-Z0-9]*[.,-_a-zA-Z0-9]*$" ]
+#	then 
+#		echo "legit-add: error: invalid filename '$f'"
+#		exit 1
+#	fi
+	# error: file doesnt exist
+	if [ ! -e $f ] 
+	then 
+		if [ ! -e ".legit/.git/index/$f" ]  	# if doesnt exist anywhere, error
+		then
+			echo "legit-add: error: can not open '$f'"
+			exit 1
+		else	# remove from index to carry deletion from cwd through
+			rm ".legit/.git/index/$f"
+			exit 1
+		fi
+	fi
+	cp "$f" ".legit/.git/index/$f"
+
+done
